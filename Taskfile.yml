@@ -27,4 +27,6 @@ tasks:
 
   lint:
     desc: Lint the code
-    cmd: golangci-lint run
+    cmds:
+      - dprint check
+      - golangci-lint run
