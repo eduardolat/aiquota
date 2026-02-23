@@ -1,10 +1,11 @@
 package credentials
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/tidwall/gjson"
 )
 
 // Credentials contains API keys and account information read from auth.json.
@@ -13,19 +14,6 @@ type Credentials struct {
 	ZAIAPIKey      *string `json:"zaiApiKey,omitempty"`
 	CodexAPIKey    *string `json:"codexApiKey,omitempty"`
 	CodexAccountID *string `json:"codexAccountId,omitempty"`
-}
-
-type authFileConfig struct {
-	ZAICodingPlan struct {
-		Key *string `json:"key"`
-	} `json:"zai-coding-plan"`
-	GitHubCopilot struct {
-		Access *string `json:"access"`
-	} `json:"github-copilot"`
-	OpenAI struct {
-		Access    *string `json:"access"`
-		AccountID *string `json:"accountId"`
-	} `json:"openai"`
 }
 
 // GetCredentials reads API keys and account information from OpenCode auth.json.
@@ -41,17 +29,25 @@ func GetCredentials() (Credentials, error) {
 		return Credentials{}, fmt.Errorf("failed to read auth file. please ensure it exists and is properly formatted. error details: %w", err)
 	}
 
-	var config authFileConfig
-	if err := json.Unmarshal(content, &config); err != nil {
-		return Credentials{}, fmt.Errorf("failed to read auth file. please ensure it exists and is properly formatted. error details: %w", err)
+	if !gjson.ValidBytes(content) {
+		return Credentials{}, fmt.Errorf("failed to read auth file. please ensure it exists and is properly formatted. error details: invalid JSON")
 	}
 
 	creds := Credentials{
-		ZAIAPIKey:      config.ZAICodingPlan.Key,
-		CopilotAPIKey:  config.GitHubCopilot.Access,
-		CodexAPIKey:    config.OpenAI.Access,
-		CodexAccountID: config.OpenAI.AccountID,
+		ZAIAPIKey:      optionalString(gjson.GetBytes(content, "zai-coding-plan.key")),
+		CopilotAPIKey:  optionalString(gjson.GetBytes(content, "github-copilot.access")),
+		CodexAPIKey:    optionalString(gjson.GetBytes(content, "openai.access")),
+		CodexAccountID: optionalString(gjson.GetBytes(content, "openai.accountId")),
 	}
 
 	return creds, nil
+}
+
+func optionalString(result gjson.Result) *string {
+	if !result.Exists() || result.Type == gjson.Null {
+		return nil
+	}
+
+	value := result.String()
+	return &value
 }
