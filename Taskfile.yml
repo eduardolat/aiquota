@@ -3,6 +3,14 @@
 version: "3"
 
 tasks:
+  ci:
+    desc: Run all CI tasks
+    cmds:
+      - task deps
+      # - task lint
+      - task test
+      - task build
+
   deps:
     desc: Install project dependencies
     cmd: go mod download
