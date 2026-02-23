@@ -101,81 +101,101 @@ func hasCredential(value *string) bool {
 }
 
 func printReport(copilotOut *copilot.Quota, zaiOut *zai.Quota, codexOut *codex.Quota, warnings []string) {
-	fmt.Println("AI QUOTA REPORT")
+	fmt.Println(bold("+-----------------+"))
+	fmt.Println(bold("| AI QUOTA REPORT |"))
+	fmt.Println(bold("+-----------------+"))
 	fmt.Println()
 
 	if copilotOut != nil {
-		fmt.Println("Provider: GitHub Copilot")
-		fmt.Printf("Account: %s (%s)\n", copilotOut.AccountUser, copilotOut.AccountType)
-		fmt.Println("- Requests")
+		printProviderHeader("GitHub Copilot", copilotOut.AccountUser, copilotOut.AccountType)
+		fmt.Println(bold("Requests"))
 		fmt.Printf(
-			"  Usage: %d / %d | Used %s%% | Remaining %s%%\n",
+			"%s %d / %d | Used %s%% | Remaining %s%%\n",
+			bold("Usage:"),
 			copilotOut.RequestsUsed,
 			copilotOut.RequestsTotal,
 			formatPercent(copilotOut.RequestsUsedPercent),
 			formatPercent(copilotOut.RequestsRemainingPercent),
 		)
-		fmt.Printf("  Reset: %s | %s\n", copilotOut.ResetIn, formatResetAt(copilotOut.ResetAt))
-		fmt.Println()
+		fmt.Printf("%s %s | %s\n", bold("Reset:"), copilotOut.ResetIn, formatResetAt(copilotOut.ResetAt))
 	}
 
 	if zaiOut != nil {
-		fmt.Println("Provider: Z.ai")
-		fmt.Printf("Account: %s (%s)\n", zaiOut.AccountID, zaiOut.AccountType)
-		fmt.Println("- Token Quota")
+		printSectionDivider()
+		printProviderHeader("Z.ai", zaiOut.AccountID, zaiOut.AccountType)
+		fmt.Println(bold("Token Quota"))
 		fmt.Printf(
-			"  Usage: Used %s%% | Remaining %s%%\n",
+			"%s Used %s%% | Remaining %s%%\n",
+			bold("Usage:"),
 			formatPercent(zaiOut.TokenQuota.UsedPercent),
 			formatPercent(zaiOut.TokenQuota.RemainingPercent),
 		)
-		fmt.Printf("  Reset: %s | %s\n", zaiOut.TokenQuota.ResetIn, formatResetAt(zaiOut.TokenQuota.ResetAt))
-		fmt.Println("- MCP Quota")
+		fmt.Printf("%s %s | %s\n", bold("Reset:"), zaiOut.TokenQuota.ResetIn, formatResetAt(zaiOut.TokenQuota.ResetAt))
+		fmt.Println()
+		fmt.Println(bold("MCP Quota"))
 		fmt.Printf(
-			"  Usage: Used %s%% | Remaining %s%%\n",
+			"%s Used %s%% | Remaining %s%%\n",
+			bold("Usage:"),
 			formatPercent(zaiOut.MCPQuota.UsedPercent),
 			formatPercent(zaiOut.MCPQuota.RemainingPercent),
 		)
-		fmt.Printf("  Reset: %s | %s\n", zaiOut.MCPQuota.ResetIn, formatResetAt(zaiOut.MCPQuota.ResetAt))
+		fmt.Printf("%s %s | %s\n", bold("Reset:"), zaiOut.MCPQuota.ResetIn, formatResetAt(zaiOut.MCPQuota.ResetAt))
 		if len(zaiOut.MCPQuota.Details) > 0 {
-			fmt.Println("  Details:")
+			fmt.Println(bold("Details:"))
 			for _, detail := range zaiOut.MCPQuota.Details {
-				fmt.Printf("  - %s: %s\n", detail.ModelCode, formatNumber(detail.Usage))
+				fmt.Printf("- %s: %s\n", detail.ModelCode, formatNumber(detail.Usage))
 			}
 		}
-		fmt.Println()
 	}
 
 	if codexOut != nil {
-		fmt.Println("Provider: OpenAI Codex")
-		fmt.Printf("Account: %s (%s)\n", codexOut.AccountEmail, codexOut.AccountType)
+		printSectionDivider()
+		printProviderHeader("OpenAI Codex", codexOut.AccountEmail, codexOut.AccountType)
 		printRateLimitWindow("Rate Limit Primary Window", codexOut.RateLimitPrimaryWindow)
-		printRateLimitWindow("Rate Limit Secondary Window", codexOut.RateLimitSecondaryWindow)
-		printRateLimitWindow("Code Review Primary Window", codexOut.CodeReviewPrimaryWindow)
 		fmt.Println()
+		printRateLimitWindow("Rate Limit Secondary Window", codexOut.RateLimitSecondaryWindow)
+		fmt.Println()
+		printRateLimitWindow("Code Review Primary Window", codexOut.CodeReviewPrimaryWindow)
 	}
 
 	if len(warnings) > 0 {
-		fmt.Println("Warnings:")
+		fmt.Println(bold("Warnings"))
+		fmt.Println("Some providers could not be queried:")
 		for _, warning := range warnings {
 			fmt.Printf("- %s\n", warning)
 		}
 	}
+
+	fmt.Println()
 }
 
 func printRateLimitWindow(name string, window codex.RateLimitWindow) {
-	fmt.Printf("- %s\n", name)
+	fmt.Println(bold(name))
 	if window.UsedPercent == nil || window.RemainingPercent == nil || window.ResetAt == nil || window.ResetIn == nil {
-		fmt.Println("  Usage: unavailable")
-		fmt.Println("  Reset: unavailable")
+		fmt.Printf("%s unavailable\n", bold("Usage:"))
+		fmt.Printf("%s unavailable\n", bold("Reset:"))
 		return
 	}
 
 	fmt.Printf(
-		"  Usage: Used %s%% | Remaining %s%%\n",
+		"%s Used %s%% | Remaining %s%%\n",
+		bold("Usage:"),
 		formatPercent(*window.UsedPercent),
 		formatPercent(*window.RemainingPercent),
 	)
-	fmt.Printf("  Reset: %s | %s\n", *window.ResetIn, formatResetAt(*window.ResetAt))
+	fmt.Printf("%s %s | %s\n", bold("Reset:"), *window.ResetIn, formatResetAt(*window.ResetAt))
+}
+
+func printProviderHeader(providerName string, account string, accountType string) {
+	fmt.Printf("%s %s\n", bold("Provider:"), bold(providerName))
+	fmt.Printf("%s %s (%s)\n", bold("Account:"), account, accountType)
+	fmt.Println()
+}
+
+func printSectionDivider() {
+	fmt.Println()
+	fmt.Println(strings.Repeat("-", 60))
+	fmt.Println()
 }
 
 func formatResetAt(value string) string {
@@ -208,4 +228,8 @@ func formatNumber(value float64) string {
 	}
 
 	return formatPercent(value)
+}
+
+func bold(value string) string {
+	return "\033[1m" + value + "\033[0m"
 }
