@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: "3"
+
+tasks:
+  deps:
+    desc: Install project dependencies
+    cmd: go mod download
+
+  run:
+    desc: Run the project
+    cmd: go run ./cmd/aiquota
+
+  build:
+    desc: Build the project
+    cmd: go build -o ./dist/aiquota ./cmd/aiquota
+
+  format:
+    desc: Format the code
+    cmds:
+      - go fmt ./...
+      - dprint fmt
+
+  test:
+    desc: Run tests
+    cmd: go test -v ./...
+
+  lint:
+    desc: Lint the code
+    cmd: golangci-lint run
