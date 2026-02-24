@@ -13,6 +13,7 @@ import (
 	"github.com/eduardolat/aiquota/internal/copilot"
 	"github.com/eduardolat/aiquota/internal/credentials"
 	"github.com/eduardolat/aiquota/internal/zai"
+	"github.com/varavelio/tinta"
 )
 
 func main() {
@@ -101,101 +102,127 @@ func hasCredential(value *string) bool {
 }
 
 func printReport(copilotOut *copilot.Quota, zaiOut *zai.Quota, codexOut *codex.Quota, warnings []string) {
-	fmt.Println(bold("+-----------------+"))
-	fmt.Println(bold("| AI QUOTA REPORT |"))
-	fmt.Println(bold("+-----------------+"))
+	title := tinta.Box().BorderDouble().BrightCyan().PaddingX(3).Center()
+	titleText := tinta.Text().BrightCyan().Bold().String("AI QUOTA REPORT")
+	fmt.Println(title.String(titleText))
 	fmt.Println()
 
 	if copilotOut != nil {
-		printProviderHeader("GitHub Copilot", copilotOut.AccountUser, copilotOut.AccountType)
-		fmt.Println(bold("Requests"))
-		fmt.Printf(
-			"%s %d / %d | Used %s%% | Remaining %s%%\n",
-			bold("Usage:"),
-			copilotOut.RequestsUsed,
-			copilotOut.RequestsTotal,
-			formatPercent(copilotOut.RequestsUsedPercent),
-			formatPercent(copilotOut.RequestsRemainingPercent),
-		)
-		fmt.Printf("%s %s | %s\n", bold("Reset:"), copilotOut.ResetIn, formatResetAt(copilotOut.ResetAt))
+		printCopilotReport(copilotOut)
 	}
 
 	if zaiOut != nil {
-		printSectionDivider()
-		printProviderHeader("Z.ai", zaiOut.AccountID, zaiOut.AccountType)
-		fmt.Println(bold("Token Quota"))
-		fmt.Printf(
-			"%s Used %s%% | Remaining %s%%\n",
-			bold("Usage:"),
-			formatPercent(zaiOut.TokenQuota.UsedPercent),
-			formatPercent(zaiOut.TokenQuota.RemainingPercent),
-		)
-		fmt.Printf("%s %s | %s\n", bold("Reset:"), zaiOut.TokenQuota.ResetIn, formatResetAt(zaiOut.TokenQuota.ResetAt))
-		fmt.Println()
-		fmt.Println(bold("MCP Quota"))
-		fmt.Printf(
-			"%s Used %s%% | Remaining %s%%\n",
-			bold("Usage:"),
-			formatPercent(zaiOut.MCPQuota.UsedPercent),
-			formatPercent(zaiOut.MCPQuota.RemainingPercent),
-		)
-		fmt.Printf("%s %s | %s\n", bold("Reset:"), zaiOut.MCPQuota.ResetIn, formatResetAt(zaiOut.MCPQuota.ResetAt))
-		if len(zaiOut.MCPQuota.Details) > 0 {
-			fmt.Println(bold("Details:"))
-			for _, detail := range zaiOut.MCPQuota.Details {
-				fmt.Printf("- %s: %s\n", detail.ModelCode, formatNumber(detail.Usage))
-			}
-		}
+		printZAIReport(zaiOut)
 	}
 
 	if codexOut != nil {
-		printSectionDivider()
-		printProviderHeader("OpenAI Codex", codexOut.AccountEmail, codexOut.AccountType)
-		printRateLimitWindow("Rate Limit Primary Window", codexOut.RateLimitPrimaryWindow)
-		fmt.Println()
-		printRateLimitWindow("Rate Limit Secondary Window", codexOut.RateLimitSecondaryWindow)
-		fmt.Println()
-		printRateLimitWindow("Code Review Primary Window", codexOut.CodeReviewPrimaryWindow)
+		printCodexReport(codexOut)
 	}
 
 	if len(warnings) > 0 {
-		fmt.Println(bold("Warnings"))
-		fmt.Println("Some providers could not be queried:")
-		for _, warning := range warnings {
-			fmt.Printf("- %s\n", warning)
+		printWarnings(warnings)
+	}
+
+	fmt.Println()
+}
+
+func printCopilotReport(out *copilot.Quota) {
+	key := tinta.Text().Bold()
+	heading := tinta.Text().BrightBlue().Bold().String("GitHub Copilot")
+	box := tinta.Box().BorderRounded().Blue().PaddingX(2).PaddingY(1).MarginBottom(1).CenterFirstLine()
+
+	content := strings.Join([]string{
+		heading,
+		"",
+		fmt.Sprintf("%s %s (%s)", key.String("Account:"), out.AccountUser, out.AccountType),
+		"",
+		fmt.Sprintf("%s %d / %d", key.String("Requests:"), out.RequestsUsed, out.RequestsTotal),
+		fmt.Sprintf("%s %s", key.String("Used:"), colorPercent(out.RequestsUsedPercent)),
+		fmt.Sprintf("%s %s", key.String("Reset in:"), formatReset(out.ResetIn, out.ResetAt)),
+	}, "\n")
+
+	fmt.Println(box.String(content))
+}
+
+func printZAIReport(out *zai.Quota) {
+	key := tinta.Text().Bold()
+	heading := tinta.Text().BrightYellow().Bold().String("Z.ai")
+	box := tinta.Box().BorderRounded().Yellow().PaddingX(2).PaddingY(1).MarginBottom(1).CenterFirstLine()
+
+	sections := []string{
+		heading,
+		"",
+		fmt.Sprintf("%s %s (%s)", key.String("Account:"), out.AccountID, out.AccountType),
+		"",
+		key.String("Token Quota"),
+		fmt.Sprintf("%s %s", key.String("Used:"), colorPercent(out.TokenQuota.UsedPercent)),
+		fmt.Sprintf("%s %s", key.String("Reset in:"), formatReset(out.TokenQuota.ResetIn, out.TokenQuota.ResetAt)),
+		"",
+		key.String("MCP Quota"),
+		fmt.Sprintf("%s %s", key.String("Used:"), colorPercent(out.MCPQuota.UsedPercent)),
+		fmt.Sprintf("%s %s", key.String("Reset in:"), formatReset(out.MCPQuota.ResetIn, out.MCPQuota.ResetAt)),
+	}
+
+	if len(out.MCPQuota.Details) > 0 {
+		sections = append(sections, "", key.String("MCP Details"))
+		for _, detail := range out.MCPQuota.Details {
+			sections = append(sections, fmt.Sprintf("- %s: %s", detail.ModelCode, formatNumber(detail.Usage)))
 		}
 	}
 
-	fmt.Println()
+	fmt.Println(box.String(strings.Join(sections, "\n")))
 }
 
-func printRateLimitWindow(name string, window codex.RateLimitWindow) {
-	fmt.Println(bold(name))
-	if window.UsedPercent == nil || window.RemainingPercent == nil || window.ResetAt == nil || window.ResetIn == nil {
-		fmt.Printf("%s unavailable\n", bold("Usage:"))
-		fmt.Printf("%s unavailable\n", bold("Reset:"))
-		return
+func printCodexReport(out *codex.Quota) {
+	key := tinta.Text().Bold()
+	section := tinta.Text().Bold()
+	heading := tinta.Text().BrightMagenta().Bold().String("OpenAI Codex")
+	box := tinta.Box().BorderRounded().Magenta().PaddingX(2).PaddingY(1).MarginBottom(1).CenterFirstLine()
+
+	sections := []string{
+		heading,
+		"",
+		fmt.Sprintf("%s %s (%s)", key.String("Account:"), out.AccountEmail, out.AccountType),
+		"",
+		formatRateLimitWindow("Rate Limit Primary Window", out.RateLimitPrimaryWindow, key, section),
+		"",
+		formatRateLimitWindow("Rate Limit Secondary Window", out.RateLimitSecondaryWindow, key, section),
+		"",
+		formatRateLimitWindow("Code Review Primary Window", out.CodeReviewPrimaryWindow, key, section),
 	}
 
-	fmt.Printf(
-		"%s Used %s%% | Remaining %s%%\n",
-		bold("Usage:"),
-		formatPercent(*window.UsedPercent),
-		formatPercent(*window.RemainingPercent),
+	fmt.Println(box.String(strings.Join(sections, "\n")))
+}
+
+func printWarnings(warnings []string) {
+	title := tinta.Text().BrightRed().Bold().String("Warnings")
+	body := []string{title, tinta.Text().Red().String("Some providers could not be queried:")}
+	for _, warning := range warnings {
+		body = append(body, tinta.Text().Yellow().Sprintf("- %s", warning))
+	}
+
+	box := tinta.Box().BorderRounded().Red().PaddingX(2).PaddingY(1)
+	fmt.Println(box.String(strings.Join(body, "\n")))
+}
+
+func formatRateLimitWindow(name string, window codex.RateLimitWindow, key *tinta.TextStyle, section *tinta.TextStyle) string {
+	lines := []string{section.String(name)}
+
+	if window.UsedPercent == nil || window.ResetAt == nil || window.ResetIn == nil {
+		lines = append(lines,
+			fmt.Sprintf("%s %s", key.String("Usage:"), "unavailable"),
+			fmt.Sprintf("%s %s", key.String("Reset in:"), "unavailable"),
+		)
+
+		return strings.Join(lines, "\n")
+	}
+
+	lines = append(lines,
+		fmt.Sprintf("%s %s", key.String("Used:"), colorPercent(*window.UsedPercent)),
+		fmt.Sprintf("%s %s", key.String("Reset in:"), formatReset(*window.ResetIn, *window.ResetAt)),
 	)
-	fmt.Printf("%s %s | %s\n", bold("Reset:"), *window.ResetIn, formatResetAt(*window.ResetAt))
-}
 
-func printProviderHeader(providerName string, account string, accountType string) {
-	fmt.Printf("%s %s\n", bold("Provider:"), bold(providerName))
-	fmt.Printf("%s %s (%s)\n", bold("Account:"), account, accountType)
-	fmt.Println()
-}
-
-func printSectionDivider() {
-	fmt.Println()
-	fmt.Println(strings.Repeat("-", 60))
-	fmt.Println()
+	return strings.Join(lines, "\n")
 }
 
 func formatResetAt(value string) string {
@@ -209,6 +236,10 @@ func formatResetAt(value string) string {
 	}
 
 	return timeValue.UTC().Format("2006-01-02 15:04:05")
+}
+
+func formatReset(resetIn string, resetAt string) string {
+	return fmt.Sprintf("%s - %s", resetIn, formatResetAt(resetAt))
 }
 
 func formatPercent(value float64) string {
@@ -230,6 +261,15 @@ func formatNumber(value float64) string {
 	return formatPercent(value)
 }
 
-func bold(value string) string {
-	return "\033[1m" + value + "\033[0m"
+func colorPercent(value float64) string {
+	percent := formatPercent(value) + "%"
+
+	switch {
+	case value >= 75:
+		return tinta.Text().BrightRed().Bold().String(percent)
+	case value >= 50:
+		return tinta.Text().BrightYellow().Bold().String(percent)
+	default:
+		return tinta.Text().BrightGreen().Bold().String(percent)
+	}
 }
