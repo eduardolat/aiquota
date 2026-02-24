@@ -151,8 +151,11 @@ func printCopilotReport(out *copilot.Quota) string {
 		"",
 		fmt.Sprintf("%s %d / %d", key.String("Requests:"), out.RequestsUsed, out.RequestsTotal),
 		fmt.Sprintf("%s %s", key.String("Used:"), colorPercent(out.RequestsUsedPercent)),
-		fmt.Sprintf("%s %s", key.String("Reset in:"), formatReset(out.ResetIn, out.ResetAt)),
 	}, "\n")
+
+	if reset := formatReset(out.ResetIn, out.ResetAt); reset != "" {
+		content += "\n" + fmt.Sprintf("%s %s", key.String("Reset in:"), reset)
+	}
 
 	return box.String(content)
 }
@@ -176,11 +179,20 @@ func printZAIReport(out *zai.Quota) string {
 		"",
 		key.String("Token Quota"),
 		fmt.Sprintf("%s %s", key.String("Used:"), colorPercent(out.TokenQuota.UsedPercent)),
-		fmt.Sprintf("%s %s", key.String("Reset in:"), formatReset(out.TokenQuota.ResetIn, out.TokenQuota.ResetAt)),
+	}
+
+	if reset := formatReset(out.TokenQuota.ResetIn, out.TokenQuota.ResetAt); reset != "" {
+		sections = append(sections, fmt.Sprintf("%s %s", key.String("Reset in:"), reset))
+	}
+
+	sections = append(sections,
 		"",
 		key.String("MCP Quota"),
 		fmt.Sprintf("%s %s", key.String("Used:"), colorPercent(out.MCPQuota.UsedPercent)),
-		fmt.Sprintf("%s %s", key.String("Reset in:"), formatReset(out.MCPQuota.ResetIn, out.MCPQuota.ResetAt)),
+	)
+
+	if reset := formatReset(out.MCPQuota.ResetIn, out.MCPQuota.ResetAt); reset != "" {
+		sections = append(sections, fmt.Sprintf("%s %s", key.String("Reset in:"), reset))
 	}
 
 	if len(out.MCPQuota.Details) > 0 {
@@ -244,10 +256,10 @@ func formatRateLimitWindow(name string, window codex.RateLimitWindow, key *tinta
 		return strings.Join(lines, "\n")
 	}
 
-	lines = append(lines,
-		fmt.Sprintf("%s %s", key.String("Used:"), colorPercent(*window.UsedPercent)),
-		fmt.Sprintf("%s %s", key.String("Reset in:"), formatReset(*window.ResetIn, *window.ResetAt)),
-	)
+	lines = append(lines, fmt.Sprintf("%s %s", key.String("Used:"), colorPercent(*window.UsedPercent)))
+	if reset := formatReset(*window.ResetIn, *window.ResetAt); reset != "" {
+		lines = append(lines, fmt.Sprintf("%s %s", key.String("Reset in:"), reset))
+	}
 
 	return strings.Join(lines, "\n")
 }
@@ -266,7 +278,22 @@ func formatResetAt(value string) string {
 }
 
 func formatReset(resetIn string, resetAt string) string {
-	return fmt.Sprintf("%s - %s", resetIn, formatResetAt(resetAt))
+	formattedResetAt := formatResetAt(resetAt)
+	trimmedResetIn := strings.TrimSpace(resetIn)
+
+	if trimmedResetIn == "" || strings.EqualFold(trimmedResetIn, "unknown") {
+		if formattedResetAt == "unknown" {
+			return ""
+		}
+
+		return formattedResetAt
+	}
+
+	if formattedResetAt == "unknown" {
+		return trimmedResetIn
+	}
+
+	return fmt.Sprintf("%s - %s", trimmedResetIn, formattedResetAt)
 }
 
 func formatPercent(value float64) string {
