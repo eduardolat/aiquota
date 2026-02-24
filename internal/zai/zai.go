@@ -94,14 +94,14 @@ func GetQuota(ctx context.Context, creds credentials.Credentials) (Quota, error)
 			UsedPercent:      tokenUsedPercent,
 			RemainingPercent: helpers.ClampPercent(100 - tokenUsedPercent),
 			ResetAt:          tokenResetAt,
-			ResetIn:          helpers.ToReadableFuture(tokenResetAt),
+			ResetIn:          helpers.FormatTimeUntil(tokenResetAt),
 		},
 		MCPQuota: MCPQuota{
 			QuotaWindow: QuotaWindow{
 				UsedPercent:      mcpUsedPercent,
 				RemainingPercent: helpers.ClampPercent(100 - mcpUsedPercent),
 				ResetAt:          mcpResetAt,
-				ResetIn:          helpers.ToReadableFuture(mcpResetAt),
+				ResetIn:          helpers.FormatTimeUntil(mcpResetAt),
 			},
 			Details: parseUsageDetails(timeLimit.Get("usageDetails")),
 		},

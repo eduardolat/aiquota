@@ -63,13 +63,3 @@ func UnixMillisToISO(value float64) string {
 	date := time.UnixMilli(int64(value)).UTC()
 	return date.Format(time.RFC3339)
 }
-
-// ToReadableFuture prepends "in " for future duration strings.
-func ToReadableFuture(resetAtISO string) string {
-	base := FormatTimeUntil(resetAtISO)
-	if base == "unknown" || base == "now" {
-		return base
-	}
-
-	return "in " + base
-}
