@@ -129,7 +129,14 @@ func printReport(copilotOut *copilot.Quota, zaiOut *zai.Quota, codexOut *codex.Q
 func printCopilotReport(out *copilot.Quota) {
 	key := tinta.Text().Bold()
 	heading := tinta.Text().BrightBlue().Bold().String("GitHub Copilot")
-	box := tinta.Box().BorderRounded().Blue().PaddingX(2).PaddingY(1).MarginBottom(1).CenterFirstLine()
+	box := tinta.Box().
+		BorderDouble().
+		Blue().
+		DisableTop().
+		DisableBottom().
+		DisableRight().
+		PaddingLeft(1).
+		PaddingRight(0)
 
 	content := strings.Join([]string{
 		heading,
@@ -147,7 +154,14 @@ func printCopilotReport(out *copilot.Quota) {
 func printZAIReport(out *zai.Quota) {
 	key := tinta.Text().Bold()
 	heading := tinta.Text().BrightYellow().Bold().String("Z.ai")
-	box := tinta.Box().BorderRounded().Yellow().PaddingX(2).PaddingY(1).MarginBottom(1).CenterFirstLine()
+	box := tinta.Box().
+		BorderDouble().
+		Yellow().
+		DisableTop().
+		DisableBottom().
+		DisableRight().
+		PaddingLeft(1).
+		PaddingRight(0)
 
 	sections := []string{
 		heading,
@@ -177,7 +191,14 @@ func printCodexReport(out *codex.Quota) {
 	key := tinta.Text().Bold()
 	section := tinta.Text().Bold()
 	heading := tinta.Text().BrightMagenta().Bold().String("OpenAI Codex")
-	box := tinta.Box().BorderRounded().Magenta().PaddingX(2).PaddingY(1).MarginBottom(1).CenterFirstLine()
+	box := tinta.Box().
+		BorderDouble().
+		Magenta().
+		DisableTop().
+		DisableBottom().
+		DisableRight().
+		PaddingLeft(1).
+		PaddingRight(0)
 
 	sections := []string{
 		heading,
