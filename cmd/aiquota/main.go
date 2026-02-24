@@ -102,35 +102,41 @@ func hasCredential(value *string) bool {
 }
 
 func printReport(copilotOut *copilot.Quota, zaiOut *zai.Quota, codexOut *codex.Quota, warnings []string) {
-	title := tinta.Box().BorderDouble().BrightCyan().PaddingX(3).Center()
-	titleText := tinta.Text().BrightCyan().Bold().String("AI QUOTA REPORT")
-	fmt.Println(title.String(titleText))
-	fmt.Println()
+	sections := []string{tinta.Text().BrightCyan().Bold().String("AI QUOTA REPORT"), ""}
 
 	if copilotOut != nil {
-		printCopilotReport(copilotOut)
+		sections = append(sections, printCopilotReport(copilotOut))
 	}
 
 	if zaiOut != nil {
-		printZAIReport(zaiOut)
+		sections = append(sections, printZAIReport(zaiOut))
 	}
 
 	if codexOut != nil {
-		printCodexReport(codexOut)
+		sections = append(sections, printCodexReport(codexOut))
 	}
 
 	if len(warnings) > 0 {
-		printWarnings(warnings)
+		sections = append(sections, printWarnings(warnings))
 	}
+
+	outer := tinta.Box().
+		BorderDouble().
+		BrightCyan().
+		PaddingLeft(0).
+		PaddingRight(1).
+		PaddingBottom(0).
+		CenterFirstLine()
+	fmt.Println(outer.String(strings.TrimSpace(strings.Join(sections, "\n"))))
 
 	fmt.Println()
 }
 
-func printCopilotReport(out *copilot.Quota) {
+func printCopilotReport(out *copilot.Quota) string {
 	key := tinta.Text().Bold()
 	heading := tinta.Text().BrightBlue().Bold().String("GitHub Copilot")
 	box := tinta.Box().
-		BorderDouble().
+		BorderSimple().
 		Blue().
 		DisableTop().
 		DisableBottom().
@@ -148,14 +154,14 @@ func printCopilotReport(out *copilot.Quota) {
 		fmt.Sprintf("%s %s", key.String("Reset in:"), formatReset(out.ResetIn, out.ResetAt)),
 	}, "\n")
 
-	fmt.Println(box.String(content))
+	return box.String(content)
 }
 
-func printZAIReport(out *zai.Quota) {
+func printZAIReport(out *zai.Quota) string {
 	key := tinta.Text().Bold()
 	heading := tinta.Text().BrightYellow().Bold().String("Z.ai")
 	box := tinta.Box().
-		BorderDouble().
+		BorderSimple().
 		Yellow().
 		DisableTop().
 		DisableBottom().
@@ -184,15 +190,15 @@ func printZAIReport(out *zai.Quota) {
 		}
 	}
 
-	fmt.Println(box.String(strings.Join(sections, "\n")))
+	return box.String(strings.Join(sections, "\n"))
 }
 
-func printCodexReport(out *codex.Quota) {
+func printCodexReport(out *codex.Quota) string {
 	key := tinta.Text().Bold()
 	section := tinta.Text().Bold()
 	heading := tinta.Text().BrightMagenta().Bold().String("OpenAI Codex")
 	box := tinta.Box().
-		BorderDouble().
+		BorderSimple().
 		Magenta().
 		DisableTop().
 		DisableBottom().
@@ -212,18 +218,18 @@ func printCodexReport(out *codex.Quota) {
 		formatRateLimitWindow("Code Review Primary Window", out.CodeReviewPrimaryWindow, key, section),
 	}
 
-	fmt.Println(box.String(strings.Join(sections, "\n")))
+	return box.String(strings.Join(sections, "\n"))
 }
 
-func printWarnings(warnings []string) {
+func printWarnings(warnings []string) string {
 	title := tinta.Text().BrightRed().Bold().String("Warnings")
 	body := []string{title, tinta.Text().Red().String("Some providers could not be queried:")}
 	for _, warning := range warnings {
 		body = append(body, tinta.Text().Yellow().Sprintf("- %s", warning))
 	}
 
-	box := tinta.Box().BorderRounded().Red().PaddingX(2).PaddingY(1)
-	fmt.Println(box.String(strings.Join(body, "\n")))
+	box := tinta.Box().BorderSimple().Red().PaddingX(2).PaddingY(1)
+	return box.String(strings.Join(body, "\n"))
 }
 
 func formatRateLimitWindow(name string, window codex.RateLimitWindow, key *tinta.TextStyle, section *tinta.TextStyle) string {
